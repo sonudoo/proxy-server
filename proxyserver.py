@@ -1,90 +1,56 @@
-import socket,requests,_thread
+import socket,requests,_thread,request_parser,response_parser,json
 requests.packages.urllib3.disable_warnings()
 host = ''
 port = 80
-server_add = "http://proxyserver/"
+server_addr = ""
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.bind((host, port))
 s.listen(1)
 
 def handle_requests(conn, addr):
 	print('Connected by', addr)
-	data = conn.recv(1024)
-	req = str(data.decode('ascii',errors='ignore')).split()
-	catch_next = False
-	req_url = ''
-	for i in req:
-		if(catch_next==True):
-			req_url = str(i)[1:]
-			break
-		if(i=='GET'):
-			catch_next = True
-	req_url_parts = req_url.split('/')
-	host = req_url_parts[0]+"//"+req_url_parts[2]+"/"
-	req_url_parts = req_url.split('.')
-	ext = req_url_parts[len(req_url_parts)-1]
-	data = ''
-	try:
-		data = requests.get(url=req_url,verify=False)
-		data = data.text
-	except:
-		pass
-	res = ''
-	if(data==''):
-		res = '''
-		HTTP/1.1 404 NOT_FOUND
-		Date: Mon, 27 Jul 2009 12:28:53 GMT
-		Server: Python/3.4 (Win32)
-		Last-Modified: Wed, 22 Jul 2009 19:15:56 GMT
-		Content-Length: 88
-		Content-Type: text/html
-		Connection: Closed
-		<html>
-		   <body>
+	data = conn.recv(65536)
+	req = request_parser.parse(data)
+	if(req['valid']==True and request_parser.validate(req['path'])==True):
+		url = request_parser.getUrl(req['path'])
 
-		   <h1>Not Found: </h1>'''+req_url+'''
+		server_addr = "http://"+req['headers']['Host']+"/"
 
-		   </body>
-		</html>
-		'''
-	else:
-		'''
-		try:
-			print(data)
-		except:
-			print(req_url)
-		'''
-		data = data.replace("href='","href='"+server_add+host)
-		data = data.replace("src='","src='"+server_add+host)
-		data = data.replace("href=\"","href=\""+server_add+host)
-		data = data.replace("src=\"","src=\""+server_add+host)
-		data = data.replace("url('","url('"+server_add+host)
-		data = data.replace("url(","url("+server_add+host)
-		data = data.replace("url(\"","url(\""+server_add+host)
-		content = ''
-		if(ext=='js'):
-			content = 'application/javascript'
-		elif(ext=='css'):
-			content = 'application/stylesheet'
-		elif(ext=='jpeg' or ext=='jpg'):
-			content = 'image/jpg'
-		elif(ext=='png'):
-			content = 'image/png'
+		print(server_addr)
+
+		if(req['method']=="GET"):
+			req['headers']['User-Agent'] = "ProxyServer/0.1"
+
+			res = requests.get(url,headers=req['headers'],verify=False,allow_redirects=False)
+
+			conn.sendall(response_parser.parse(res))
+			conn.close()
+
+		elif(req['method']=="POST"):
+			req['headers']['User-Agent'] = "ProxyServer/0.1"
+
+			post_data = request_parser.getPostData(req['raw_content'])
+			print(post_data)
+			res = requests.post(url,headers=req['headers'],data=post_data,verify=False,allow_redirects=False)
+
+
+			conn.sendall(response_parser.parse(res))
+			conn.close()
+
+
+		elif(req['method']=="PUT"):
+			conn.sendall("HTTP/1.1 200 OK\r\nContent-type: text/html\r\n\r\nFile upload is not supported".encode())
+			conn.close()
+
+
 		else:
-			content = 'text/html'
-
-		res = '''
-		HTTP/1.1 200 OK
-		Date: Mon, 27 Jul 2009 12:28:53 GMT
-		Server: Python/3.4 (Win32)
-		Last-Modified: Wed, 22 Jul 2009 19:15:56 GMT
-		Content-Length: 
-		Content-Type: '''+content+'''
-		Connection: Closed
-
-		'''+data+''''''
-	conn.sendall(res.encode(errors='ignore'))
-	conn.close()
+			conn.sendall("HTTP/1.1 200 OK\r\nContent-type: text/html\r\n\r\nInvalid Request.. Please stop connecting now".encode())
+			conn.close()
+	else:
+		#It is a invalid URL that the user wants to send requests to
+		conn.sendall("HTTP/1.1 200 OK\r\nContent-type: text/html\r\n\r\nInvalid Request.. Please stop connecting now".encode())
+		conn.close()
+		return
 
 while True:
 	conn, addr = s.accept()
