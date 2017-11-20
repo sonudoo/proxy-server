@@ -11,30 +11,27 @@ def handle_requests(conn, addr):
 	print('Connected by', addr)
 	data = conn.recv(65536)
 	req = request_parser.parse(data)
+
 	if(req['valid']==True and request_parser.validate(req['path'])==True):
-		url = request_parser.getUrl(req['path'])
 
 		server_addr = "http://"+req['headers']['Host']+"/"
-
-		print(server_addr)
+		url, host, absolute_path = request_parser.getUrlHostPath(req['path'])
+		req['headers']['User-Agent'] = "ProxyServer/0.1"
+		req['headers']['Host'] = host
 
 		if(req['method']=="GET"):
-			req['headers']['User-Agent'] = "ProxyServer/0.1"
 
 			res = requests.get(url,headers=req['headers'],verify=False,allow_redirects=False)
-
-			conn.sendall(response_parser.parse(res))
+			conn.sendall(response_parser.parse(res, server_addr, absolute_path))
 			conn.close()
 
 		elif(req['method']=="POST"):
-			req['headers']['User-Agent'] = "ProxyServer/0.1"
 
 			post_data = request_parser.getPostData(req['raw_content'])
-			print(post_data)
 			res = requests.post(url,headers=req['headers'],data=post_data,verify=False,allow_redirects=False)
 
 
-			conn.sendall(response_parser.parse(res))
+			conn.sendall(response_parser.parse(res, server_addr, absolute_path))
 			conn.close()
 
 
@@ -44,11 +41,11 @@ def handle_requests(conn, addr):
 
 
 		else:
-			conn.sendall("HTTP/1.1 200 OK\r\nContent-type: text/html\r\n\r\nInvalid Request.. Please stop connecting now".encode())
+			conn.sendall("HTTP/1.1 200 OK\r\nContent-type: text/html\r\n\r\nBitzoom is currently down.. Please stop connecting now".encode())
 			conn.close()
 	else:
 		#It is a invalid URL that the user wants to send requests to
-		conn.sendall("HTTP/1.1 200 OK\r\nContent-type: text/html\r\n\r\nInvalid Request.. Please stop connecting now".encode())
+		conn.sendall("HTTP/1.1 200 OK\r\nContent-type: text/html\r\n\r\nBitzoom is currently down.. Please stop connecting now".encode())
 		conn.close()
 		return
 
@@ -56,6 +53,6 @@ while True:
 	conn, addr = s.accept()
 	try:
 	   _thread.start_new_thread(handle_requests,(conn, addr))
-	except:
-	   pass
+	except e:
+	   print(e)
 	

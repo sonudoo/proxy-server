@@ -89,9 +89,18 @@ def validate(path):
 
 	return True
 
-def getUrl(path):
+def getUrlHostPath(path):
 
-	return path[1:]
+	s = path.split('/')
+
+	host = s[3]
+
+	absolute_path = ""
+
+	for i in range(1,len(s)-1):
+		absolute_path += s[i]+"/"
+
+	return path[1:],host,absolute_path
 
 def getPostData(raw_content):
 
