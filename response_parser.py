@@ -5,6 +5,7 @@ def parse(res, server_addr, absolute_path):
 	res.headers['Server'] = "ProxyServer/0.1"
 	try:
 		del res.headers['Content-Encoding']
+		del res.headers['Transfer-Encoding']
 	except:
 		pass
 	if(res.status_code==404):

@@ -18,7 +18,6 @@ def handle_requests(conn, addr):
 		url, host, absolute_path = request_parser.getUrlHostPath(req['path'])
 		req['headers']['User-Agent'] = "ProxyServer/0.1"
 		req['headers']['Host'] = host
-
 		if(req['method']=="GET"):
 
 			res = requests.get(url,headers=req['headers'],verify=False,allow_redirects=False)
@@ -26,6 +25,15 @@ def handle_requests(conn, addr):
 			conn.close()
 
 		elif(req['method']=="POST"):
+
+			post_data_length = int(req['headers']['Content-Length'])
+
+			if(req['raw_content'] is None):
+				req['raw_content'] = b''
+
+			while(len(req['raw_content']) < post_data_length):
+				data = conn.recv(65536)
+				req['raw_content'] += data
 
 			post_data = request_parser.getPostData(req['raw_content'])
 			res = requests.post(url,headers=req['headers'],data=post_data,verify=False,allow_redirects=False)

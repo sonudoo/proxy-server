@@ -95,9 +95,9 @@ def getUrlHostPath(path):
 
 	host = s[3]
 
-	absolute_path = ""
+	absolute_path = s[1]+"//"+s[3]+"/"
 
-	for i in range(1,len(s)-1):
+	for i in range(4,len(s)-1):
 		absolute_path += s[i]+"/"
 
 	return path[1:],host,absolute_path
@@ -110,7 +110,11 @@ def getPostData(raw_content):
 
 	for i in data:
 		key = i.split('=')[0]
-		value = urllib.parse.unquote(urllib.parse.unquote_plus((i.split('=')[1])))
+		value = ""
+		try:
+			value = urllib.parse.unquote(urllib.parse.unquote_plus((i.split('=')[1])))
+		except:
+			pass
 		post_data[key] = value
 
 	return post_data
