@@ -104,14 +104,25 @@ def handle_requests(conn, addr):
 
 
 		else:
-			conn.sendall("HTTP/1.1 200 OK\r\nContent-type: text/html\r\n\r\nInvalid request.. Please stop connecting now".encode())
+			conn.sendall(("HTTP/1.1 200 OK\r\nContent-type: text/html\r\n\r\nInvalid request.. Please make sure that your request format is correct. For example if you want to visit www.yahoo.com then enter <b>http://ip_address/http://www.yahoo.com/</b> into your browser and NOT just <b>http://proxyserver/www.yahoo.com/</b><br><br>Total requests served: "+str(curr)+"").encode())
 			conn.close()
 	else:
 
 		#It is a invalid request
-		conn.sendall("HTTP/1.1 200 OK\r\nContent-type: text/html\r\n\r\nInvalid request.. Please stop connecting now".encode())
+		f = open("counter.txt","r")
+		curr = int(f.readline())
+		f.close()
+		conn.sendall(("HTTP/1.1 200 OK\r\nContent-type: text/html\r\n\r\nInvalid request.. Please make sure that your request format is correct. For example if you want to visit www.yahoo.com then enter <b>http://ip_address/http://www.yahoo.com/</b> into your browser and NOT just <b>http://proxyserver/www.yahoo.com/</b><br><br>Total requests served: "+str(curr)+"").encode())
 		conn.close()
-		return
+	
+	#Update counter to count the number of requests served successfully.
+	f = open("counter.txt","r")
+	curr = int(f.readline())
+	f.close()
+	f = open("counter.txt","w")
+	f.write(str(curr+1))
+	f.close()
+	return
 
 while True:
 
@@ -120,7 +131,6 @@ while True:
 	try:
 		_thread.start_new_thread(handle_requests,(conn, addr))
 	except e:
-		print(e)
 		conn.sendall("HTTP/1.1 500 INTERNAL_SERVER_ERROR\r\nContent-type: text/html\r\n\r\nError occured. Please try again later".encode())
 		conn.close()
 	
