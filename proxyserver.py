@@ -23,8 +23,8 @@ then server_addr = "http://proxyserver/" and host = "www.imdb.com"
 # Bind to the port and keep listening.
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.bind((host, port))
-s.listen(1)
+s.bind(('', port)) #Localhost
+s.listen(100) #Queue upto 100 connections
 
 def handle_requests(conn, addr):
 
@@ -67,6 +67,19 @@ def handle_requests(conn, addr):
 
 			conn.sendall(response_parser.parse(res, server_addr, absolute_path))
 			conn.close()
+
+			#Update counter to count the number of requests served successfully.
+			f = open("counter.txt","r")
+			curr = int(f.readline())
+			f.close()
+			f = open("counter.txt","w")
+			f.write(str(curr+1))
+			f.close()
+
+			#Log the IP address of requestor and the requested website
+			f = open("log.txt","a")
+			f.write(str(addr[0])+" "+host+"\n")
+			f.close()
 
 		elif(req['method']=="POST"):
 
@@ -114,14 +127,7 @@ def handle_requests(conn, addr):
 		f.close()
 		conn.sendall(("HTTP/1.1 200 OK\r\nContent-type: text/html\r\n\r\nInvalid request.. Please make sure that your request format is correct. For example if you want to visit www.yahoo.com then enter <b>http://ip_address/http://www.yahoo.com/</b> into your browser and NOT just <b>http://proxyserver/www.yahoo.com/</b><br><br>Total requests served: "+str(curr)+"").encode())
 		conn.close()
-	
-	#Update counter to count the number of requests served successfully.
-	f = open("counter.txt","r")
-	curr = int(f.readline())
-	f.close()
-	f = open("counter.txt","w")
-	f.write(str(curr+1))
-	f.close()
+
 	return
 
 while True:
