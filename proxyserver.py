@@ -103,8 +103,9 @@ def handle_requests(conn, addr):
 
 			# Send POST requests. Allowing redirect is False because we want to handle 302 and 301 manually.
 
+			print(post_data)
 			res = requests.post(url,headers=req['headers'],data=post_data,verify=False,allow_redirects=False)
-
+			print(res.headers)
 
 			conn.sendall(response_parser.parse(res, server_addr, absolute_path))
 			conn.close()

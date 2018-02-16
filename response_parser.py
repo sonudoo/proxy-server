@@ -1,4 +1,4 @@
-import time
+import time,re
 
 '''
 This script prepares the response in proper format to be sent
@@ -58,11 +58,48 @@ def parse(res, server_addr, absolute_path):
 				loc = res.headers[x]
 				if(loc[0:7]=="http://" or loc[0:8]=="https://"):
 					# Absolute address
-					pass
+					
+					ret += str(x)+": "+str(server_addr+loc)+"\r\n"
+
 				else:
 					# Relative address
-					loc = absolute_path + loc
-				ret += str(x)+": "+str(server_addr+loc)+"\r\n"
+
+					host_name = absolute_path.split('/')
+					host_name = host_name[0] + "//" + host_name[2] + "/"
+
+					if(loc[0]=='/'):
+
+						# Its a address relative home directory. 
+
+						loc = server_addr + host_name + loc[1:]
+					else:
+
+						# Its a address relative to CWD
+
+						loc = server_addr + absolute_path + loc
+
+					ret += str(x)+": "+str(loc)+"\r\n"
+			elif(x=="Set-Cookie"):
+
+				#Replace the Set-Cookie domain to current server address
+
+				rep = "" #Replacement string
+
+				i = 0
+				l = len(res.headers[x])
+
+				while i<l:
+					if(i+7<l and res.headers[x][i:i+7]=="domain="):
+						rep += "domain="+server_addr.split('/')[2]
+						i += 7
+						while(i<l and res.headers[x][i]!=','):
+							i += 1
+					if(i==l):
+						break
+					rep += res.headers[x][i]
+					i+=1
+
+				ret += str(x)+": "+str(rep)+"\r\n"
 			else:
 				ret += str(x)+": "+str(res.headers[x])+"\r\n"
 		ret += "\r\n"
@@ -136,22 +173,30 @@ def parseHTML(res, server_addr):
 
 	data = data.replace("href='//","href='http://")
 	data = data.replace("src='//","src='http://")
+	data = data.replace("action='//","action='http://")
 	data = data.replace("href=\"//","href=\"http://")
 	data = data.replace("src=\"//","src=\"http://")
+	data = data.replace("action=\"//","action=\"http://")
 
 	data = data.replace("href='/","href='")
 	data = data.replace("src='/","src='")
+	data = data.replace("action='/","action='")
 	data = data.replace("href=\"/","href=\"")
 	data = data.replace("src=\"/","src=\"")
+	data = data.replace("action=\"/","action=\"")
 
 	data = data.replace("href='","href='"+server_addr+cwd)
 	data = data.replace("src='","src='"+server_addr+cwd)
+	data = data.replace("action='","action='"+server_addr+cwd)
 	data = data.replace("href=\"","href=\""+server_addr+cwd)
 	data = data.replace("src=\"","src=\""+server_addr+cwd)
+	data = data.replace("action=\"","action=\""+server_addr+cwd)
 
 	data = data.replace("href='"+server_addr+cwd+"h","href='"+server_addr+"h")
 	data = data.replace("href=\""+server_addr+cwd+"h","href=\""+server_addr+"h")
 	data = data.replace("src='"+server_addr+cwd+"h","src='"+server_addr+"h")
 	data = data.replace("src=\""+server_addr+cwd+"h","src=\""+server_addr+"h")
+	data = data.replace("action='"+server_addr+cwd+"h","action='"+server_addr+"h")
+	data = data.replace("action=\""+server_addr+cwd+"h","action=\""+server_addr+"h")
 
 	return data.encode(errors='ignore')
