@@ -28,10 +28,6 @@ s.listen(100) #Queue upto 100 connections
 
 def handle_requests(conn, addr):
 
-	#Print the address and port of connected client.
-
-	print('Connected by', addr)
-
 	#Receive upto 65536 Bytes of data. I assume that all the HTTP headers are covered within a single recv()
 
 	data = conn.recv(65536)
@@ -103,10 +99,7 @@ def handle_requests(conn, addr):
 
 			# Send POST requests. Allowing redirect is False because we want to handle 302 and 301 manually.
 
-			print(post_data)
 			res = requests.post(url,headers=req['headers'],data=post_data,verify=False,allow_redirects=False)
-			print(res.headers)
-
 			conn.sendall(response_parser.parse(res, server_addr, absolute_path))
 			conn.close()
 

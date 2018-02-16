@@ -83,23 +83,45 @@ def parse(res, server_addr, absolute_path):
 
 				#Replace the Set-Cookie domain to current server address
 
-				rep = "" #Replacement string
+				res.headers[x] = res.headers[x].split(', ') #Seperate each cookie
 
-				i = 0
-				l = len(res.headers[x])
+				#Seperation could have been at expiration date as well as it has a format Sat, 17-Feb-2018 05:42:21 GMT
+				
+				tokens = []
+				j = 0
+				while j < len(res.headers[x]):
 
-				while i<l:
-					if(i+7<l and res.headers[x][i:i+7]=="domain="):
-						rep += "domain="+server_addr.split('/')[2]
-						i += 7
-						while(i<l and res.headers[x][i]!=','):
-							i += 1
-					if(i==l):
-						break
-					rep += res.headers[x][i]
-					i+=1
+					curr_token = res.headers[x][j]
+					l = len(curr_token)
 
-				ret += str(x)+": "+str(rep)+"\r\n"
+					if(curr_token[l-3:l]=="Mon" or curr_token[l-4:l]=="Tues" or curr_token[l-3:l]=="Wed" or curr_token[l-5:l]=="Thurs" or curr_token[l-3:l]=="Fri" or curr_token[l-3:l]=="Sat" or curr_token[l-3:l]=="Sun"):
+						tokens.append((res.headers[x][j]+", "+res.headers[x][j+1]))
+						j+=1
+					else:
+						tokens.append(res.headers[x][j])
+					j+=1
+
+				res.headers[x] = tokens
+
+				for j in range(len(res.headers[x])):
+
+					rep = "" #Replacement string
+
+					i = 0
+					l = len(res.headers[x][j])
+
+					while i<l:
+						if(i+7<l and res.headers[x][j][i:i+7]=="domain="):
+
+							#Don't include the domain parameter of cookie as it always causes problem
+							rep = rep[:len(rep)-2] # domain must have been precceded by path. Remove ; at the end of it
+							break
+
+						rep += res.headers[x][j][i]
+						i += 1
+
+					ret += str(x)+": "+str(rep)+"\r\n" # Add a new Set-Cookie with the cookie
+
 			else:
 				ret += str(x)+": "+str(res.headers[x])+"\r\n"
 		ret += "\r\n"
@@ -165,12 +187,14 @@ def parseHTML(res, server_addr):
 
 	url = res.url.split("/")
 
-	cwd = ""
+	cwd = "" #Location of current resource directory. Ex http://server_addr/https://www.tansyoj.com/judge/ will have https://www.tansyoj.com/judge/ as CWD
 
 	for i in range(0,len(url)-1):
 		cwd += url[i]+"/"
 
+	website = url[0]+"//"+url[2]+"/" #https://www.tansyoj.com/
 
+	# // is same as http://
 	data = data.replace("href='//","href='http://")
 	data = data.replace("src='//","src='http://")
 	data = data.replace("action='//","action='http://")
@@ -178,13 +202,15 @@ def parseHTML(res, server_addr):
 	data = data.replace("src=\"//","src=\"http://")
 	data = data.replace("action=\"//","action=\"http://")
 
-	data = data.replace("href='/","href='")
-	data = data.replace("src='/","src='")
-	data = data.replace("action='/","action='")
-	data = data.replace("href=\"/","href=\"")
-	data = data.replace("src=\"/","src=\"")
-	data = data.replace("action=\"/","action=\"")
+	#The next set of lines work when / is in the beginning if URL which signifies relative address wrt website home
+	data = data.replace("href='/","href='"+website)
+	data = data.replace("src='/","src='"+website)
+	data = data.replace("action='/","action='"+website)
+	data = data.replace("href=\"/","href=\""+website)
+	data = data.replace("src=\"/","src=\""+website)
+	data = data.replace("action=\"/","action=\""+website)
 
+	#Add http://server_addr/cwd/ to prefix of all URL.
 	data = data.replace("href='","href='"+server_addr+cwd)
 	data = data.replace("src='","src='"+server_addr+cwd)
 	data = data.replace("action='","action='"+server_addr+cwd)
@@ -192,6 +218,7 @@ def parseHTML(res, server_addr):
 	data = data.replace("src=\"","src=\""+server_addr+cwd)
 	data = data.replace("action=\"","action=\""+server_addr+cwd)
 
+	#Eliminate cwd from prefix where the URL already starts with h
 	data = data.replace("href='"+server_addr+cwd+"h","href='"+server_addr+"h")
 	data = data.replace("href=\""+server_addr+cwd+"h","href=\""+server_addr+"h")
 	data = data.replace("src='"+server_addr+cwd+"h","src='"+server_addr+"h")
