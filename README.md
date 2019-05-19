@@ -2,7 +2,7 @@ This is a HTTP proxy server. It is primarily built for 'proxifying' HTTP request
 
 Current Version: 0.1
 
-#Usage
+### Usage
 
 1. Clone the repository to the computer that you want to use as proxy server.
 2. Run the script 'proxyserver.py' on the same.
